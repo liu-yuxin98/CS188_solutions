@@ -534,11 +534,13 @@ def readCommand( argv ):
 
     # Choose a layout
     args['layout'] = layout.getLayout( options.layout )
+
     if args['layout'] == None: raise Exception("The layout " + options.layout + " cannot be found")
 
     # Choose a Pacman agent
     noKeyboard = options.gameToReplay == None and (options.textGraphics or options.quietGraphics)
     pacmanType = loadAgent(options.pacman, noKeyboard)
+
     agentOpts = parseAgentArgs(options.agentArgs)
     if options.numTraining > 0:
         args['numTraining'] = options.numTraining
@@ -553,8 +555,9 @@ def readCommand( argv ):
 
     # Choose a ghost agent
     ghostType = loadAgent(options.ghost, noKeyboard)
-    args['ghosts'] = [ghostType( i+1 ) for i in range( options.numGhosts )]
 
+    args['ghosts'] = [ghostType( i+1 ) for i in range( options.numGhosts )]
+ 
     # Choose a display format
     if options.quietGraphics:
         import textDisplay
@@ -626,6 +629,7 @@ def replayGame( layout, actions, display ):
     display.finish()
 
 def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0, catchExceptions=False, timeout=30 ):
+
     import __main__
     __main__.__dict__['_display'] = display
 
@@ -644,6 +648,7 @@ def runGames( layout, pacman, ghosts, display, numGames, record, numTraining = 0
             rules.quiet = False
         game = rules.newGame( layout, pacman, ghosts, gameDisplay, beQuiet, catchExceptions)
         game.run()
+
         if not beQuiet: games.append(game)
 
         if record:
