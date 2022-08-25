@@ -288,6 +288,10 @@ class CornersProblem(search.SearchProblem):
         # Please add any code here which you would like to use
         # in initializing the problem
         "*** YOUR CODE HERE ***"
+        # self.reached = set()
+        self.sGS = startingGameState
+        
+     
 
     def getStartState(self):
         """
@@ -295,14 +299,32 @@ class CornersProblem(search.SearchProblem):
         space)
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        state = (self.startingPosition, [])
+        return state
+        # return (self.startingPosition,set())
 
     def isGoalState(self, state):
         """
         Returns whether this search state is a goal state of the problem.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        node = state[0]
+        visitedCorners = state[1]
+        
+        if node in self.corners:
+            if not node in visitedCorners:
+                visitedCorners.append(node)
+            return len(visitedCorners) == 4
+        else:
+            return False 
+
+        # node_pos = state[0]
+        # if node_pos in self.corners:
+        #     if node_pos not in self.reached:
+        #         self.reached.add(node_pos)
+        #     return len(self.reached) == 4
+        # return False 
+
 
     def getSuccessors(self, state):
         """
@@ -314,20 +336,49 @@ class CornersProblem(search.SearchProblem):
             state, 'action' is the action required to get there, and 'stepCost'
             is the incremental cost of expanding to that successor
         """
-
-        successors = []
+        x,y = state[0]
+        visitedCorners = state[1]
+        successors = []     
+           
         for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
-            # Add a successor state to the successor list if the action is legal
-            # Here's a code snippet for figuring out whether a new position hits a wall:
-            #   x,y = currentPosition
-            #   dx, dy = Actions.directionToVector(action)
-            #   nextx, nexty = int(x + dx), int(y + dy)
-            #   hitsWall = self.walls[nextx][nexty]
-
-            "*** YOUR CODE HERE ***"
+            dx, dy = Actions.directionToVector(action)
+            nextx, nexty = int(x + dx), int(y + dy)
+            hitsWall = self.walls[nextx][nexty]
+            
+            if not hitsWall:
+                nextnode = (nextx, nexty)
+                successorVisitedCorners = list(visitedCorners)
+                if nextnode in self.corners:
+                    if not nextnode in successorVisitedCorners:
+                        successorVisitedCorners.append(nextnode)
+                        
+                successors.append(((nextnode, successorVisitedCorners), action, 1))
+            
 
         self._expanded += 1 # DO NOT CHANGE
         return successors
+
+        # successors = []
+        # for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
+        #     # Add a successor state to the successor list if the action is legal
+        #     # Here's a code snippet for figuring out whether a new position hits a wall:
+        #     #   x,y = currentPosition
+        #     #   dx, dy = Actions.directionToVector(action)
+        #     #   nextx, nexty = int(x + dx), int(y + dy)
+        #     #   hitsWall = self.walls[nextx][nexty]
+
+        #     "*** YOUR CODE HERE ***"
+        #     x,y = state[0]
+        #     dx, dy = Actions.directionToVector(action)
+        #     nextx, nexty = int(x + dx), int(y + dy)
+
+        #     if not self.walls[nextx][nexty]:
+        #         nextState = ((nextx, nexty),self.reached)
+        #         cost = 1
+        #         successors.append(( nextState,  action, cost) )
+
+        # self._expanded += 1 # DO NOT CHANGE
+        # return successors
 
     def getCostOfActions(self, actions):
         """
@@ -360,7 +411,27 @@ def cornersHeuristic(state, problem):
     walls = problem.walls # These are the walls of the maze, as a Grid (game.py)
 
     "*** YOUR CODE HERE ***"
-    return 0 # Default to trivial solution
+    node = state[0]
+    visitedCorners = state[1]
+    
+    unvisited = []
+    
+    for corner in corners:
+        if corner not in visitedCorners:
+            unvisited.append(corner)
+    
+    totalDistance = 0
+    
+    # while unvisited != []:
+    #     distance, corner = min([(mazeDistance(node, corner, problem.sGS), corner) for corner in unvisited])
+    #     totalDistance += distance
+    #     node = corner
+    #     unvisited.remove(corner)
+    for corner in unvisited:
+        totalDistance = max(totalDistance, mazeDistance(node, corner, problem.sGS) )
+        
+    return totalDistance
+
 
 class AStarCornersAgent(SearchAgent):
     "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
@@ -454,7 +525,15 @@ def foodHeuristic(state, problem):
     """
     position, foodGrid = state
     "*** YOUR CODE HERE ***"
-    return 0
+    food_lst = foodGrid.asList()
+    totalDist = 0
+    # for all food select the max distance from food to cur pos
+    for foor_pos in food_lst:
+        curr = mazeDistance(position, foor_pos, problem.startingGameState)
+        totalDist = max(totalDist,curr)
+
+    return totalDist
+
 
 class ClosestDotSearchAgent(SearchAgent):
     "Search for all food using a sequence of searches"
@@ -485,7 +564,35 @@ class ClosestDotSearchAgent(SearchAgent):
         problem = AnyFoodSearchProblem(gameState)
 
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        # print(startPosition)
+        # print(problem.isGoalState((15,1)))
+        # import sys
+        # min_dis = sys.maxsize
+        # near_dot = None
+        # for dot in food.asList():
+        #     dis = mazeDistance(startPosition,dot,problem.startState)
+        #     if dis < min_dis:
+        #         min_dis = dis
+        #         near_dot = dot
+        # find path from startPosition to near dot
+        from util import Queue
+        fringe = Queue()
+        current = (problem.getStartState(), [], [])
+        fringe.push(current)
+        reached = []
+        while not fringe.isEmpty():
+            node, path, total = fringe.pop()
+            if problem.isGoalState(node):
+                return path
+            if not node in reached:
+                reached.append(node)
+                for coord, move, cost in problem.getSuccessors(node):
+                    fringe.push((coord, path + [move], total + [cost])) 
+        return []        
+
+
+
+
 
 class AnyFoodSearchProblem(PositionSearchProblem):
     """
@@ -512,6 +619,7 @@ class AnyFoodSearchProblem(PositionSearchProblem):
         self.startState = gameState.getPacmanPosition()
         self.costFn = lambda x: 1
         self._visited, self._visitedlist, self._expanded = {}, [], 0 # DO NOT CHANGE
+        
 
     def isGoalState(self, state):
         """
@@ -521,7 +629,8 @@ class AnyFoodSearchProblem(PositionSearchProblem):
         x,y = state
 
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return state in self.food.asList()
+
 
 def mazeDistance(point1, point2, gameState):
     """
